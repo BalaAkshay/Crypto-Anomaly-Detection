@@ -3,7 +3,7 @@ import pandas as pd
 import time
 
 
-api_key = "---"
+api_key = "xxx"
 api_secret = "xxx"
 
 
