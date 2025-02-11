@@ -2,6 +2,7 @@ from data_collection import fetch_binance_data
 from preprocessing import load_data, calculate_features
 from feature_engineering import apply_minmax_scaling, apply_standard_scaling, apply_winsorization, apply_log_transformation
 from visualization import visualize_data
+from model import detect_anomalies_isolation_forest
 
 def main():
     # Step 1: Fetch data from Binance API
@@ -27,7 +28,7 @@ def main():
 
     data_scaled = apply_winsorization(data_scaled, bounded_columns + unbounded_columns)
 
-    skewed_columns = ["Volume"]
+    skewed_columns = ["Quote Asset Volume", "Number of Trades", "Taker Buy Base Asset volume", "Taker Buy Quote asset Volume"]
     data_scaled = apply_log_transformation(data_scaled, skewed_columns)
 
     
@@ -36,6 +37,12 @@ def main():
     print("Data preprocessing and feature engineering completed successfully!")
 
     visualize_data(data)
+
+    print("Detecting anomalies using Isolation Forest...")
+    anomalies_if = detect_anomalies_isolation_forest(data_scaled, ['Close', 'Volume'])
+    print(f"Isolation Forest Anomalies: {len(anomalies_if)}")
+
+    anomalies_if.to_csv("anomalies_isolation_forest.csv", index=False)
 
 if __name__ == "__main__":
     main()
