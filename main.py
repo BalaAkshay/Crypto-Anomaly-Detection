@@ -8,7 +8,7 @@ from preprocessing import load_data, calculate_features
 from feature_engineering import apply_minmax_scaling, apply_standard_scaling, apply_winsorization, apply_log_transformation
 from visualization import plot_anomalies_if, plot_anomalies_auto
 from isolation_forest import detect_anomalies_isolation_forest
-from autoecoder import build_autoencoder, train_autoencoder, detect_anomalies_autoencoder
+from autoencoder import build_autoencoder, train_autoencoder, detect_anomalies_autoencoder
 
 np.random.seed(42)
 tf.random.set_seed(42)
