@@ -1,8 +1,18 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 from data_collection import fetch_binance_data
 from preprocessing import load_data, calculate_features
 from feature_engineering import apply_minmax_scaling, apply_standard_scaling, apply_winsorization, apply_log_transformation
-from visualization import plot_anomalies
-from model import detect_anomalies_isolation_forest
+from visualization import plot_anomalies_if, plot_anomalies_auto
+from isolation_forest import detect_anomalies_isolation_forest
+from autoecoder import build_autoencoder, train_autoencoder, detect_anomalies_autoencoder
+
+np.random.seed(42)
+tf.random.set_seed(42)
+
 
 def main():
     # Step 1: Fetch data from Binance API
@@ -36,22 +46,52 @@ def main():
     data_scaled.to_csv("BTCUSDT_processed_data.csv", index=False)
     print("Data preprocessing and feature engineering completed successfully!")
 
-    # Step 4: Anomaly Detection Model
-    advanced_features = ["Close", "Volume", "Bollinger_Upper", "Bollinger_Lower", "Signal_Line"]
-    basic_features = ["SMA_30", "RSI", "Daily Return", "Close", "Volatility_7", "Volume"]
-    features = basic_features 
+    # Step 4.1: Isolation Forest Model
+    advanced_features_if = ["Bollinger_Upper", "Bollinger_Lower", "Signal_Line"]
+    basic_features_if = ["Close", "Volume", "RSI", "SMA_30", "Daily Return"]
+    features_if =   basic_features_if
 
-    data_subset = data_scaled[features].dropna()
+    data_subset_if = data_scaled[features_if].dropna()
 
     print("Detecting anomalies using Isolation Forest...")
-    anomalies_indices = detect_anomalies_isolation_forest(data_subset, features, 0.026)
+    anomalies_indices_if = detect_anomalies_isolation_forest(data_subset_if, features_if, 0.03)
 
     # Save results
-    anomalies = data.loc[anomalies_indices]  # Get anomaly rows from original data
-    anomalies.to_csv("anomalies_isolation_forest.csv", index=False)
-    print("Anomaly detection completed and results saved!")
+    anomalies_if = data.loc[anomalies_indices_if]  # Get anomaly rows from original data
+    anomalies_if.to_csv("anomalies_isolation_forest.csv", index=False)
 
-    plot_anomalies(data, anomalies_indices, title="Anomalies in BTCUSDT Closing Price")
+    print("!!Anomaly detection using Isolation Forest completed and results saved!!")
+
+
+
+    # Step 4.2: Autoencoder Model
+    features_auto = ['Close', 'Daily Return', 'Volume', 'RSI', 'MACD', 'SMA_7']
+
+    data_subset_auto = data_scaled[features_auto].dropna()
+
+    X_train, X_test = train_test_split(data_subset_auto, test_size = 0.18, random_state = 2)
+
+    input_dim = X_train.shape[1]
+
+    autoencoder = build_autoencoder(input_dim, encoding_dim = 32)
+
+    history = train_autoencoder(autoencoder, X_train, epochs = 70, batch_size = 32, validation_data = (X_test, X_test))
+
+    print("Detecting anomalies using Autoencoder....")
+    anomalies_auto, reconstruction_error = detect_anomalies_autoencoder(autoencoder, X_test, threshold_percentile = 95)
+
+    # Save results
+    anomalies_indices_auto = np.where(anomalies_auto)[0]
+    anomalies_data = data.iloc[-len(X_test):].iloc[anomalies_indices_auto]
+    anomalies_data.to_csv("anomalies_autoencoder.csv", index=False)
+    
+    print("!!Anomaly detection using Autoencoder completed and results saved!!")
+
+    # Visualiation
+    #plot_anomalies_if(data, anomalies_indices_if, title="Anomalies in BTCUSDT Closing Price(Isolation Forest)")
+    plot_anomalies_auto(data, X_test, anomalies_indices_auto, title="Anomalies in Closing Price(Autoencoder)")
+    
+
 
 if __name__ == "__main__":
     main()
