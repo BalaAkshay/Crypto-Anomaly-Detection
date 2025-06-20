@@ -27,25 +27,44 @@ from autoencoder import (
     train_autoencoder,
     detect_anomalies_autoencoder
 )
-from alert import send_alert
 
 # Set random seeds for reproducibility
 np.random.seed(42)
 tf.random.set_seed(42)
 
+# === Input function for selecting crypto ===
+def get_crypto_symbol():
+    print("Select a cryptocurrency to analyze:")
+    print("1. Bitcoin (BTC)")
+    print("2. Dogecoin (DOGE)")
+    print("3. Ethereum (ETH)")
+    
+    choice = input("Enter your choice (1/2/3): ").strip()
+    
+    if choice == '1':
+        return "BTCUSDT"
+    elif choice == '2':
+        return "DOGEUSDT"
+    elif choice == '3':
+        return "ETHUSDT"
+    else:
+        print("Invalid choice. Defaulting to Dogecoin (DOGEUSDT).")
+        return "DOGEUSDT"
 
 def main():
-    # === Step 1: Fetch Data ===
-    symbol = "DOGEUSDT"
+    # === Step 0: Choose crypto ===
+    symbol = get_crypto_symbol()
     interval = "1d"
     start_date = "1 Jan 2018"
     end_date = None
+
+    # === Step 1: Fetch Data ===
     data = fetch_binance_data(symbol, interval, start_date, end_date)
-    data.to_csv("DOGEUSDT_historical_data.csv", index=False)
+    data.to_csv(f"{symbol}_historical_data.csv", index=False)
     print("Data fetched and saved successfully!")
 
     # === Step 2: Load & Feature Engineering ===
-    data = load_data("DOGEUSDT_historical_data.csv")
+    data = load_data(f"{symbol}_historical_data.csv")
     data = calculate_features(data)
     data_scaled = data.copy()
 
@@ -64,7 +83,7 @@ def main():
         "Taker Buy Quote asset Volume"
     ]
     data_scaled = apply_log_transformation(data_scaled, skewed_columns)
-    data_scaled.to_csv("DOGEUSDT_processed_data.csv", index=False)
+    data_scaled.to_csv(f"{symbol}_processed_data.csv", index=False)
     print("Data preprocessing and feature engineering completed successfully!")
 
     # === Step 3: Isolation Forest ===
@@ -76,19 +95,10 @@ def main():
         data_subset_if, features_if, contamination=0.03
     )
 
-    # Save Isolation Forest Results
     anomalies_if = data.loc[anomalies_indices_if].copy()
     anomalies_if["Anomaly_Type"] = ["Pump" if idx in pump_indices_if else "Dump" for idx in anomalies_indices_if]
-    anomalies_if.to_csv("anomalies_isolation_forest.csv", index=False)
-    print("!!Anomaly detection using Isolation Forest completed and results saved!!")
-
-    # Alerts for Isolation Forest
-    for idx in pump_indices_if:
-        date = idx.strftime('%Y-%m-%d')
-        send_alert(f"Isolation Forest detected PUMP anomaly on {date}")
-    for idx in dump_indices_if:
-        date = idx.strftime('%Y-%m-%d')
-        send_alert(f"Isolation Forest detected DUMP anomaly on {date}")
+    anomalies_if.to_csv(f"anomalies_if_{symbol}.csv", index=False)
+    print("Anomaly detection using Isolation Forest completed and results saved!")
 
     # === Step 4: Autoencoder ===
     features_auto = ['Close', 'Daily Return', 'Volume', 'RSI', 'MACD', 'SMA_7']
@@ -105,38 +115,34 @@ def main():
         autoencoder, X_test.values, threshold_percentile=95, return_threshold=True
     )
 
-    # Save Autoencoder Results
     anomalies_indices_auto = np.where(anomalies_auto)[0]
     anomalies_data = data.iloc[-len(X_test):].iloc[anomalies_indices_auto].copy()
     anomalies_data['Anomaly_Type'] = labels[anomalies_auto]
-    anomalies_data.to_csv("anomalies_autoencoder.csv", index=False)
-    print("!!Anomaly detection using Autoencoder completed and results saved!!")
-
-    # Alerts for Autoencoder
-    test_dates = data.index[-len(X_test):]
-    for i, is_anom in enumerate(anomalies_auto):
-        if is_anom:
-            date = test_dates[i].strftime('%Y-%m-%d')
-            send_alert(f"Autoencoder detected {labels[i].upper()} anomaly on {date}")
+    anomalies_data.to_csv(f"anomalies_autoencoder_{symbol}.csv", index=False)
+    print("Anomaly detection using Autoencoder completed and results saved!")
 
     # === Step 5: Visualization ===
     print("Visualizing results...")
-    visualize_data(data)
 
-    # Yearly Isolation Forest plots
-    for year in range(2020, 2026):
-        plot_yearly_anomalies_if(data, pump_indices_if, year, label="Pump", color="green", marker="x")
-        plot_yearly_anomalies_if(data, dump_indices_if, year, label="Dump", color="red", marker="o")
+    visualize_data(data, symbol)
 
-    # Yearly Autoencoder plots
+    # Isolation Forest visualizations
+    plot_anomalies_if(data, pump_indices_if, symbol)
+    plot_anomalies_if(data, dump_indices_if, symbol)
+
+    # Autoencoder visualizations
+    plot_anomalies_auto(data, X_test, anomalies_auto, labels, symbol)
+
+    # Yearly Plots
     for year in range(2020, 2026):
-        plot_yearly_anomalies_auto(data, X_test, anomalies_auto, labels, year)
+        plot_yearly_anomalies_auto(data, X_test, anomalies_auto, labels, year, symbol)
+        plot_yearly_anomalies_if(data, pump_indices_if, year, "Pump", "green", "x", symbol)
+        plot_yearly_anomalies_if(data, dump_indices_if, year, "Dump", "red", "o", symbol)
 
     # Reconstruction Error
     plot_reconstruction_error(reconstruction_error, threshold)
 
     print("All visualizations complete!")
-
 
 if __name__ == "__main__":
     main()
