@@ -43,4 +43,3 @@ def fetch_binance_data(symbol, interval, start_date, end_date = None):
 
 
 
-
