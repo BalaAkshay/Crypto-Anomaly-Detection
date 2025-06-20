@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 # === 1. Visualize Price and Moving Averages ===
-def visualize_data(data, show_sma=True):
+def visualize_data(data, symbol="CRYPTO", show_sma=True):
     plt.figure(figsize=(14, 6))
     plt.plot(data.index, data["Close"], label="Close Price", color="blue")
 
@@ -11,7 +11,7 @@ def visualize_data(data, show_sma=True):
         if "SMA_30" in data.columns:
             plt.plot(data.index, data["SMA_30"], label="30-Day SMA", color="green", linestyle='--')
 
-    plt.title("Close Price and Moving Averages")
+    plt.title(f"{symbol} Close Price and Moving Averages")
     plt.xlabel("Date")
     plt.ylabel("Price (USD)")
     plt.legend()
@@ -21,7 +21,10 @@ def visualize_data(data, show_sma=True):
 
 
 # === 2. Isolation Forest Anomaly Plot ===
-def plot_anomalies_if(data, anomalies_indices, title="Anomalies in Closing Price (Isolation Forest)"):
+def plot_anomalies_if(data, anomalies_indices, symbol="CRYPTO", title=None):
+    if title is None:
+        title = f"{symbol} Anomalies in Closing Price (Isolation Forest)"
+        
     plt.figure(figsize=(14, 6))
     plt.plot(data.index, data["Close"], label="Close Price", color="blue")
 
@@ -38,7 +41,10 @@ def plot_anomalies_if(data, anomalies_indices, title="Anomalies in Closing Price
 
 
 # === 3. Autoencoder Anomaly Plot with Pump/Dump Distinction ===
-def plot_anomalies_auto(data, X_test, anomalies_mask, labels, title="Anomalies in Closing Price (Autoencoder)"):
+def plot_anomalies_auto(data, X_test, anomalies_mask, labels, symbol="CRYPTO", title=None):
+    if title is None:
+        title = f"{symbol} Anomalies in Closing Price (Autoencoder)"
+
     plt.figure(figsize=(14, 6))
 
     test_data = data.iloc[-len(X_test):].copy()
@@ -74,7 +80,7 @@ def plot_reconstruction_error(errors, threshold, title="Reconstruction Error wit
 
 
 # === 5. Yearly Anomaly Plots for Autoencoder ===
-def plot_yearly_anomalies_auto(data, X_test, anomalies_mask, labels, year):
+def plot_yearly_anomalies_auto(data, X_test, anomalies_mask, labels, year, symbol="CRYPTO"):
     test_data = data.iloc[-len(X_test):].copy()
     yearly_data = test_data[test_data.index.year == year]
     if yearly_data.empty:
@@ -90,7 +96,7 @@ def plot_yearly_anomalies_auto(data, X_test, anomalies_mask, labels, year):
     plt.scatter(pump_indices, yearly_data.loc[pump_indices, "Close"], color="green", label="Pump (↑)", marker="x")
     plt.scatter(dump_indices, yearly_data.loc[dump_indices, "Close"], color="red", label="Dump (↓)", marker="o")
 
-    plt.title(f"Autoencoder Anomalies in DOGEUSDT ({year})")
+    plt.title(f"Autoencoder Anomalies in {symbol} ({year})")
     plt.xlabel("Date")
     plt.ylabel("Price (USD)")
     plt.legend()
@@ -100,7 +106,7 @@ def plot_yearly_anomalies_auto(data, X_test, anomalies_mask, labels, year):
 
 
 # === 6. Yearly Anomaly Plots for Isolation Forest ===
-def plot_yearly_anomalies_if(data, anomaly_indices, year, label, color, marker):
+def plot_yearly_anomalies_if(data, anomaly_indices, year, label, color, marker, symbol="CRYPTO"):
     yearly_data = data[data.index.year == year]
     anomaly_year_indices = [idx for idx in anomaly_indices if idx in yearly_data.index]
     if not anomaly_year_indices:
@@ -109,10 +115,11 @@ def plot_yearly_anomalies_if(data, anomaly_indices, year, label, color, marker):
     plt.figure(figsize=(14, 6))
     plt.plot(yearly_data.index, yearly_data["Close"], label="Close Price", color="blue")
     plt.scatter(anomaly_year_indices, data.loc[anomaly_year_indices, "Close"], color=color, label=label, marker=marker)
-    plt.title(f"Isolation Forest {label}s in DOGEUSDT ({year})")
+    plt.title(f"Isolation Forest {label}s in {symbol} ({year})")
     plt.xlabel("Date")
     plt.ylabel("Price (USD)")
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
