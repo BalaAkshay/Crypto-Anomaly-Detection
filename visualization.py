@@ -46,3 +46,19 @@ def plot_anomalies_auto(data, X_test, anomalies_indices, title="Anomalies in Clo
     plt.ylabel("Price (USD)")
     plt.legend()
     plt.show()
+
+
+def plot_anomalies_attention(data, X_test, anomalies_indices, title="Anomalies in Closing Price(Attention_ae)"):
+    
+    plt.figure(figsize=(12, 6))
+    plt.plot(data.index, data["Close"], label="Close Price", color="blue")
+    plt.scatter(
+        data.index[-len(X_test):][anomalies_indices],
+        data.iloc[-len(X_test):]["Close"].iloc[anomalies_indices],
+        color="red", label="Anomalies", marker="x"
+    )
+    plt.title("Anomalies in BTCUSDT Closing Price (Attention_ae)")
+    plt.xlabel("Date")
+    plt.ylabel("Price (USD)")
+    plt.legend()
+    plt.show()
