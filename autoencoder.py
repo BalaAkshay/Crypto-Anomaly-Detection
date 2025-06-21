@@ -2,6 +2,7 @@ import numpy as np
 from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Dense, Input
+from keras.optimizers import Adam
 
 
 def build_autoencoder(input_dim, encoding_dim=32):
@@ -10,14 +11,20 @@ def build_autoencoder(input_dim, encoding_dim=32):
         
         Input(shape=(input_dim,)),
         Dense(64, activation = 'relu'),
-        Dense(encoding_dim, activation = 'relu'),
+        Dense(32, activation = 'relu'),
+        Dense(16, activation = 'relu'),
 
+        Dense(encoding_dim, activation = 'relu'),
+        
+        Dense(16, activation = 'relu'),
+        Dense(32, activation = 'relu'),
         Dense(64, activation = 'relu'),
-        Dense(input_dim, activation = 'sigmoid')
+
+        Dense(input_dim, activation = 'linear')
     
     ])
 
-    autoencoder.compile(optimizer = 'adam', loss = 'mse')
+    autoencoder.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
 
     return autoencoder
 
