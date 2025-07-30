@@ -1,4 +1,3 @@
-Thanks for sharing the files! Based on the codebase, here's a complete draft of your project’s `README.md` file:
 
 ---
 
